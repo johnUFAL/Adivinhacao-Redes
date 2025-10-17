@@ -1,0 +1,1 @@
+# Protocolo python: comandos e respostas
