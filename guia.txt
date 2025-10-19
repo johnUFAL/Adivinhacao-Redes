@@ -1,0 +1,17 @@
+https://www.datacamp.com/pt/tutorial/a-complete-guide-to-socket-programming-in-python
+
+.AF_INET -> IPv4, cria um ponot de conexão 
+.SOCK_STREAM -> soquete que especifica um fluco de dados confiável e orientado (TCP)
+.bind -> associa um endereço de rede a uma porta local
+.listen -> inicia a escuta de conexão de entrada 
+.accept -> aceita uma conexão de um cliente
+.decode -> converte uma sequência de bytes de volta para uma string legível
+.recv -> recebe dados 
+.send -> enviar dados
+.close -> fecha conexão 
+
+
+thread: é um fluxo de execução dentro de um processo que permite que uma aplicação execute múltiplas tarefas simultanemanente ou concorrentemente
+https://medium.com/@habbema/threads-em-python-9a3a7b3c776d
+threading.Thread -> permite criar e gerenciar threads
+.active_count -> retorna o número de threads ativadas em um determinado momento
