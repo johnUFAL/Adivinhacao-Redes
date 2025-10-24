@@ -19,4 +19,4 @@ threading.Thread -> permite criar e gerenciar threads
 @staticmethod -> um "decorador" que vai definir um método estático dentro de uma classe 
 Não recebe um self específico
 
-
+time.sleep() -> uma pequena paua entre as mensagens para ficar mehlor de visualizar
