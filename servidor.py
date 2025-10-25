@@ -13,12 +13,37 @@ class Jogo:
     def __init__(self):
         self.num_secreto = None
         self.jogo_ativo = False
-        self.clientes = [] #lita de clientes
+        self.clientes = [] #lista de clientes
+        self.clientesWin = [] # lista de clientes que acertaram
+        self.lock = threading.Lock() # impede com que multiplas threads executem ações que possam resultar em conflito
 
-    def inicar_game(self):
+    def iniciar_game(self):
         self.num_secreto = random.randint(1, 100) #gerando numero aleatorio
         self.jogo_ativo = True
         print(f'Nova partida, Num: {self.num_secreto}')
+
+    def adicionar_cliente(self, conexao):
+        with self.lock:
+            self.clientes.append(conexao)   
+
+    def remover_cliente(self, conexao):
+        with self.lock:
+            if conexao in self.clientes:
+                self.clientes.remove(conexao)    
+
+    def cliente_acertou(self, conexao):
+        with self.lock:
+            if conexao in self.clientes:
+                self.clientesWin.append(conexao)
+
+    def broadcast(self, endereco):
+        for conexao in self.clientes:
+            conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Há {len(self.clientes) - len(self.clientesWin)} ainda jogando") + "\n").encode())
+
+            if conexao not in self.clientesWin:
+                conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Bora betinha agiliza! O colega de endereço {endereco} acertou!!!") + "\n").encode())
+
+
 
 #global game aqui
 jogo = Jogo()
@@ -26,6 +51,7 @@ jogo = Jogo()
 #multiplos clientes
 def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, porta))
     print(f'[Nova conexão] cliente conectado em {endereco}')
+    jogo.adicionar_cliente(conexao)
 
     # time.sleep(0.2)  
     # conexao.send(Protocolo.codificar(Protocolo.INICIAR, " Adivinhe o numero escolhido entre 1 e 100").encode())
@@ -44,20 +70,25 @@ def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, po
             comando, dados = Protocolo.decodificar(msg) # separa em comando e dados a mensagem 
             if comando == Protocolo.SAIR:
                 time.sleep(0.2)  
-                conexao.send(Protocolo.codificar(Protocolo.FIM_PARTIDA, " Se desconectando do servidor...").encode())
+                jogo.remover_cliente(conexao)
+                time.sleep(0.2)
+                conexao.send((Protocolo.codificar(Protocolo.FIM_PARTIDA, "Se desconectando do servidor...") + "\n").encode())
                 break
 
             elif comando == Protocolo.TENTATIVA: # condicionamento do valor inserido pelo usuário
                 tentativa = int(dados)
                 if tentativa > jogo.num_secreto:
                     time.sleep(0.2)  
-                    conexao.send(Protocolo.codificar(Protocolo.MAIOR, "O numero é menor").encode())
+                    conexao.send((Protocolo.codificar(Protocolo.MAIOR, "O numero é menor") + "\n").encode())
                 elif tentativa < jogo.num_secreto:
                     time.sleep(0.2)  
-                    conexao.send(Protocolo.codificar(Protocolo.MENOR, "O numero é maior").encode())
+                    conexao.send((Protocolo.codificar(Protocolo.MENOR, "O numero é maior") + "\n").encode())
                 else:
                     time.sleep(0.2)  
-                    conexao.send(Protocolo.codificar(Protocolo.ACERTOU, f"Você acertou!!! O numero premiado é: {jogo.num_secreto}").encode())
+                    conexao.send((Protocolo.codificar(Protocolo.ACERTOU, f"Você acertou!!! Aguarde os friends acertarem") + "\n").encode())
+                    jogo.cliente_acertou(conexao)
+                    time.sleep(0.2)
+                    jogo.broadcast(endereco)
             else:
                 time.sleep(0.2)  
                 conexao.send(Protocolo.codificar(Protocolo.ERRO, "Comando inválido").encode())
@@ -78,7 +109,7 @@ def main():
     servidor.listen() # fica no modo escuta, default: 5
     print('[server ativado]')
 
-    jogo.inicar_game()
+    jogo.iniciar_game()
 
     while True:
         conexao, endereco = servidor.accept() # cria um novo objeto socket para cada cliente

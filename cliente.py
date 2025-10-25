@@ -15,44 +15,70 @@ cliente.connect((LOCALHOST, PORTA)) # se conecta ao servidor
 
 print("Adivinhe o numero escolhido entre 1 e 100 [-1 para sair]: ") # texto inicial
 
+aguardar = False
+
 while True:
 
-    tentativa = int(input('Valor: ')) # será perguntado indefinidamente
+    if not aguardar: # para impedir o usuario de inputar algo ao vencer
 
-    if tentativa == -1:
+        tentativa = int(input('Valor: ')) # será perguntado indefinidamente
+
+        if tentativa == -1:
+            time.sleep(.2)
+            cliente.send(Protocolo.codificar(Protocolo.SAIR, "").encode()) # envia uma mensagem de saida para o servidor
+            resp = cliente.recv(1024).decode() # recebe a mensagem de saida do servidor mostrando que ele recebeu a solicitação de saida
+            comando, dados = Protocolo.decodificar(resp)
+
+            if comando == Protocolo.FIM_PARTIDA:
+                print(f'Server resposta: {comando} | {dados}')
+            else:
+                print("Erro ao se desconectar! Você ainda está conectado")
+                continue
+
+            break
+        
         time.sleep(.2)
-        cliente.send(Protocolo.codificar(Protocolo.SAIR, "").encode()) # envia uma mensagem de saida para o servidor
-        resp = cliente.recv(1024).decode() # recebe a mensagem de saida do servidor mostrando que ele recebeu a solicitação de saida
-        comando, dados = Protocolo.decodificar(resp)
+        cliente.send(Protocolo.codificar(Protocolo.TENTATIVA, tentativa).encode()) # envia uma mensagem com a tentativa para o servidor
+        
+        resp = cliente.recv(1024).decode() # recebe uma mensagem do servidor com até 1024 bytes que será transformada de bytes para string
 
-        if comando == Protocolo.FIM_PARTIDA:
-            print(f'Server resposta: {comando} | {dados}')
-        else:
-            print("Erro ao se desconectar! Você ainda está conectado")
+        if not resp:
+            print("Server fechado =(")
+            break
+
+        mensagens = resp.split("\n") # para caso seja recebida multiplas mensagens do servidor
+
+        for msg in mensagens:
+            if not msg:
+                continue
+
+            # caso não esteja vazia, essa mensagem que já foi transformada será dividida em (comando, dados)
+            comando, dados = Protocolo.decodificar(msg)
+            # print(f'Server resposta: {comando} | {dados}')
+
+            if comando == Protocolo.ERRO:
+                print("Você digitou um valor inválido!")
+            elif comando == Protocolo.ACERTOU:
+                print(f"{dados}")
+                aguardar = True
+            elif comando == Protocolo.AVISO:
+                print(f"{dados}")
+            else: # MAIOR ou MENOR
+                print(f'Dica: {dados}')
+    else: # para que o cliente continue recebendo os avisos do servidor
+        resp = cliente.recv(1024).decode()
+        
+        if not resp: # para caso resp esteja vazio
             continue
 
-        break
-    
-    time.sleep(.2)
-    cliente.send(Protocolo.codificar(Protocolo.TENTATIVA, tentativa).encode()) # envia uma mensagem com a tentativa para o servidor
-    
-    resp = cliente.recv(1024).decode() # recebe uma mensagem do servidor com até 1024 bytes que será transformada de bytes para string
+        mensagens = resp.split("\n")
 
-    if not resp:
-        print('Server fechado.')
-        break
-    
-    # caso não esteja vazia, essa mensagem que já foi transformada será dividida em (comando, dados)
-    comando, dados = Protocolo.decodificar(resp)
-    # print(f'Server resposta: {comando} | {dados}')
+        for msg in mensagens:
+            if not msg:
+                continue
 
-    if comando == Protocolo.ERRO:
-        print("Você digitou um valor inválido!")
-    elif comando == Protocolo.ACERTOU:
-        print(f"{dados}")
-        continue
-    else: # MAIOR ou MENOR
-        print(f'Dica: {dados}')
-        continue
+            comando, dados = Protocolo.decodificar(msg)
+
+            print(f"{dados}")
 
 cliente.close() # se desconecta do servidor

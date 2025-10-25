@@ -12,6 +12,8 @@ class Protocolo:
     ACERTOU = "ACERTOU"
     FIM_PARTIDA = "FIM_PARTIDA"
     ERRO = "ERRO"
+    GANHOU = "GANHOU"
+    AVISO = "AVISO"
 
     @staticmethod
     def codificar(comando, dados=""):
