@@ -12,6 +12,8 @@ Um jogo multiplayer de adivinhação onde múltiplos clientes competem para adiv
 
 ## Como Executar
 
+Deverá ser aberta no mínimo três janelas no cmd, ou prompt de comando, para a operação adequada do game. Sendo uma destinada ao servidor e as outras para os jogadores, ou clientes, ficando a critério do usuário abrir mais janelas para novos jogadores
+
 1. **Inicie o servidor:**
    ```bash
    python servidor.py
