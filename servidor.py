@@ -37,13 +37,14 @@ class Jogo:
                 self.clientesWin.append(conexao)
 
     def broadcast(self, endereco):
-        for conexao in self.clientes:
+        with self.lock:
+            clientes_copy = self.clientes[:]
+
+        for conexao in clientes_copy:
             conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Há {len(self.clientes) - len(self.clientesWin)} ainda jogando") + "\n").encode())
 
             if conexao not in self.clientesWin:
                 conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Bora betinha agiliza! O colega de endereço {endereco} acertou!!!") + "\n").encode())
-
-
 
 #global game aqui
 jogo = Jogo()
@@ -53,44 +54,48 @@ def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, po
     print(f'[Nova conexão] cliente conectado em {endereco}')
     jogo.adicionar_cliente(conexao)
 
-    # time.sleep(0.2)  
-    # conexao.send(Protocolo.codificar(Protocolo.INICIAR, " Adivinhe o numero escolhido entre 1 e 100").encode())
-    # conexao.send() = envia os dados para esse socket, ou esse cliente especifico
-    # Protocolo.codificar = organiza a mensagem, unindo o comando e dados de uma forma padronizada e retorna uma string
-    # encode = transforma a string retornada pelo codificar em bytes para que seja possivel enviar pelo socket
-
     while True:
         try:
             msg = conexao.recv(1024).decode()
             # recv = lê até 1024 bytes
             # decode = transforma os bytes em string
             if not msg: 
-                break # desconecta
-            
-            comando, dados = Protocolo.decodificar(msg) # separa em comando e dados a mensagem 
-            if comando == Protocolo.SAIR:
-                time.sleep(0.2)  
                 jogo.remover_cliente(conexao)
-                time.sleep(0.2)
+                break # desconecta
+
+            comando, dados = Protocolo.decodificar(msg) # separa em comando e dados a mensagem 
+
+            try:
+                tentativa = int(dados)
+            except ValueError:
+                conexao.send((Protocolo.codificar(Protocolo.ERRO, "Digite um número válido") + "\n").encode())
+                # conexao.send() = envia os dados para esse socket, ou esse cliente especifico
+                # Protocolo.codificar = organiza a mensagem, unindo o comando e dados de uma forma padronizada e retorna uma string
+                # encode = transforma a string retornada pelo codificar em bytes para que seja possivel enviar pelo socket
+                continue
+            
+            if comando == Protocolo.SAIR:
+                # time.sleep(0.2)  
+                jogo.remover_cliente(conexao)
+                # time.sleep(0.2)
                 conexao.send((Protocolo.codificar(Protocolo.FIM_PARTIDA, "Se desconectando do servidor...") + "\n").encode())
                 break
-
             elif comando == Protocolo.TENTATIVA: # condicionamento do valor inserido pelo usuário
                 tentativa = int(dados)
                 if tentativa > jogo.num_secreto:
-                    time.sleep(0.2)  
+                    # time.sleep(0.2)  
                     conexao.send((Protocolo.codificar(Protocolo.MAIOR, "O numero é menor") + "\n").encode())
                 elif tentativa < jogo.num_secreto:
-                    time.sleep(0.2)  
+                    # time.sleep(0.2)  
                     conexao.send((Protocolo.codificar(Protocolo.MENOR, "O numero é maior") + "\n").encode())
                 else:
-                    time.sleep(0.2)  
+                    # time.sleep(0.2)  
                     conexao.send((Protocolo.codificar(Protocolo.ACERTOU, f"Você acertou!!! Aguarde os friends acertarem") + "\n").encode())
                     jogo.cliente_acertou(conexao)
-                    time.sleep(0.2)
+                    # time.sleep(0.2)
                     jogo.broadcast(endereco)
             else:
-                time.sleep(0.2)  
+                # time.sleep(0.2)  
                 conexao.send(Protocolo.codificar(Protocolo.ERRO, "Comando inválido").encode())
         
         except Exception as e:
@@ -116,7 +121,6 @@ def main():
         thread = threading.Thread(target=clientes, args=(conexao, endereco))  # cria thread para atender multiplos usuarios (função que vai lidar com cada cliente, argumentos)
         thread.start() # inicia a thread
         print(f'[conexoes ativas] {threading.active_count() - 1}')
-
 
 if __name__ == '__main__': # só executa diretamente
     main()
