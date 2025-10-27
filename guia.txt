@@ -15,6 +15,7 @@ múltiplas tarefas simultanemanente ou concorrentemente
 https://medium.com/@habbema/threads-em-python-9a3a7b3c776d
 threading.Thread -> permite criar e gerenciar threads
 .active_count -> retorna o número de threads ativadas em um determinado momento
+.daemon -> tarefas em segundo plano
 
 @staticmethod -> um "decorador" que vai definir um método estático dentro de uma classe 
 Não recebe um self específico
