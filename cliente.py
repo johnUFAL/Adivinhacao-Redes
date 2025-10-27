@@ -2,6 +2,7 @@
 import socket
 import threading
 import time
+import sys
 from protocolo import Protocolo
 
 LOCALHOST = "localhost" # em que host irá operar
@@ -11,7 +12,11 @@ cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # cria o objeto sock
 # socket.AF_INET = rede IPV4
 # socket.SOCK_STREAM = protocolo TCP
 
-cliente.connect((LOCALHOST, PORTA)) # se conecta ao servidor
+try:
+    cliente.connect((LOCALHOST, PORTA)) # se conecta ao servidor
+except:
+    print("Servidor indisponivel")
+    sys.exit(0)
 
 print("Adivinhe o numero escolhido entre 1 e 100 [-1 para sair]: ") # texto inicial
 
@@ -35,7 +40,7 @@ while True:
             comando, dados = Protocolo.decodificar(resp)
 
             if comando == Protocolo.FIM_PARTIDA:
-                print(f'Server resposta: {comando} | {dados}')
+                print(dados)
             else:
                 print("Erro ao se desconectar! Você ainda está conectado")
                 continue
@@ -43,8 +48,13 @@ while True:
             break
         
         # time.sleep(.2)
-        cliente.send(Protocolo.codificar(Protocolo.TENTATIVA, tentativa).encode()) # envia uma mensagem com a tentativa para o servidor
-        
+        try:
+            cliente.send(Protocolo.codificar(Protocolo.TENTATIVA, tentativa).encode()) # envia uma mensagem com a tentativa para o servidor
+        except (ConnectionResetError, BrokenPipeError): 
+            print("Server fechado =(")
+            # ConnectionResetError → servidor fechou a conexão abruptamente
+            # BrokenPipeError → ocorre quando se tenta escrever em socket fechado
+
         resp = cliente.recv(1024).decode() # recebe uma mensagem do servidor com até 1024 bytes que será transformada de bytes para string
 
         if not resp:
@@ -65,6 +75,8 @@ while True:
                 print("Você digitou um valor inválido!")
             elif comando == Protocolo.FIM_SERVIDOR:
                 print(f"{dados}")
+                cliente.close()
+                sys.exit(0)
                 break
             elif comando == Protocolo.ACERTOU:
                 print(f"{dados}")

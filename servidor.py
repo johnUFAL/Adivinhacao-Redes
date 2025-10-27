@@ -57,10 +57,10 @@ class Jogo:
             clientesWin_copy = self.clientesWin[:]
 
         for conexao in clientes_copy:
-            conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Há {len(clientes_copy) - len(clientesWin_copy)} ainda jogando") + "\n").encode())
+            conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Há {len(clientes_copy) - len(clientesWin_copy)} ainda jogando")).encode())
 
             if conexao not in clientesWin_copy:
-                conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Bora betinha agiliza! O colega de endereço {endereco} acertou!!!") + "\n").encode())
+                conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Bora betinha agiliza! O colega de endereço {endereco} acertou!!!")).encode())
 
 #global game aqui
 jogo = Jogo()
@@ -83,31 +83,31 @@ def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, po
             comando, dados = Protocolo.decodificar(msg) # separa em comando e dados a mensagem 
             
             if comando == Protocolo.SAIR:
-                # time.sleep(0.2)  
                 jogo.remover_cliente(conexao)
-                # time.sleep(0.2)
-                conexao.send((Protocolo.codificar(Protocolo.FIM_PARTIDA, "Se desconectando do servidor...") + "\n").encode())
+                
+                conexao.send((Protocolo.codificar(Protocolo.FIM_PARTIDA, "Se desconectando do servidor...")).encode())
                 # conexao.send() = envia os dados para esse socket, ou esse cliente especifico
                 # Protocolo.codificar = organiza a mensagem, unindo o comando e dados de uma forma padronizada e retorna uma string
                 # encode = transforma a string retornada pelo codificar em bytes para que seja possivel enviar pelo socket
                 break
             elif comando == Protocolo.TENTATIVA: # condicionamento do valor inserido pelo usuário
-                if dados > jogo.num_secreto:
-                    # time.sleep(0.2)  
-                    conexao.send((Protocolo.codificar(Protocolo.MAIOR, "O numero é menor") + "\n").encode())
-                elif dados < jogo.num_secreto:
-                    # time.sleep(0.2)  
-                    conexao.send((Protocolo.codificar(Protocolo.MENOR, "O numero é maior") + "\n").encode())
+                try:
+                    valor_inserido = int(dados)
+                except:
+                    conexao.send((Protocolo.codificar(Protocolo.ERRO, "Valor inserido inválido")).encode())
+                    continue
+            
+                if valor_inserido > jogo.num_secreto:
+                    conexao.send((Protocolo.codificar(Protocolo.MAIOR, "O numero é menor")).encode())
+                elif valor_inserido < jogo.num_secreto:
+                    conexao.send((Protocolo.codificar(Protocolo.MENOR, "O numero é maior")).encode())
                 else:
-                    # time.sleep(0.2)  
-                    conexao.send((Protocolo.codificar(Protocolo.ACERTOU, f"Você acertou!!! Aguarde os friends acertarem") + "\n").encode())
+                    conexao.send((Protocolo.codificar(Protocolo.ACERTOU, "Você acertou!!! Aguarde os friends acertarem")).encode())
                     jogo.cliente_acertou(conexao)
-                    # time.sleep(0.2)
+                    
                     jogo.broadcast(endereco)
             else:
-                # time.sleep(0.2)  
                 conexao.send(Protocolo.codificar(Protocolo.ERRO, "Comando inválido").encode())
-        
         except Exception as e:
             # print(f"[Erro] {e}")
             jogo.seguro_print(f"[Erro] {e}")
@@ -129,13 +129,14 @@ def comando_servidor(servidor, jogo): # (conexao do servidor, objeto jogo)
 
         if cmd == "Y":
             # print("Encerrando servidor e desconectando jogadores")
-            jogo.seguro_print("Encerrando servidor e desconectando jogadores")
+            jogo.seguro_print("Encerrando servidor e desconectando jogadores...")
 
             with jogo.lock:
                 for c in jogo.clientes:
                     try:
-                        c.send((Protocolo.codificar(Protocolo.FIM_SERVIDOR, "Admin encerrou o servidor. Até logo") + "\n").encode())
-                        c.close()
+                        print(c)
+                        c.send((Protocolo.codificar(Protocolo.FIM_SERVIDOR, "Admin encerrou o servidor. Até logo")).encode())
+                        # c.close()
                     except:
                         pass
 
@@ -150,7 +151,7 @@ def main(): # thread principal
     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # (tipo de Rede, tipo de Protocolo)
     # bind em 8888
     servidor.bind((LOCALHOST, PORTA)) # associa a um endereço e porta fixas
-    #aguarda conexão
+    # aguarda conexão
     servidor.listen() # fica no modo escuta, default: 5
     # print('[server ativado]')
     jogo.seguro_print('[server ativado]')
