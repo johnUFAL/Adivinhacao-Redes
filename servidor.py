@@ -3,6 +3,7 @@ import socket
 import threading
 import random
 import time
+import sys
 from protocolo import Protocolo
 
 LOCALHOST = "localhost"
@@ -16,11 +17,22 @@ class Jogo:
         self.clientes = [] #lista de clientes
         self.clientesWin = [] # lista de clientes que acertaram
         self.lock = threading.Lock() # impede com que multiplas threads executem ações que possam resultar em conflito
+        self.lock_print = threading.Lock() # impede com as threads que estão vinculadas com os clientes entrem em conflito com que recebe comandos
 
+    def seguro_print(self, msg, apagar = False):
+        with self.lock_print:
+            if apagar:
+                sys.stdout.write("\r" + " " * 80 + "\r")  # limpa a linha do input
+            print(msg)
+            if apagar:
+                sys.stdout.write(msg)  # restaura o prompt
+                sys.stdout.flush()
+    
     def iniciar_game(self):
         self.num_secreto = random.randint(1, 100) #gerando numero aleatorio
         self.jogo_ativo = True
-        print(f'Nova partida, Num: {self.num_secreto}')
+        # print(f'Nova partida, Num: {self.num_secreto}')
+        self.seguro_print(f'Nova partida, Num: {self.num_secreto}')
 
     def adicionar_cliente(self, conexao):
         with self.lock:
@@ -55,7 +67,8 @@ jogo = Jogo()
 
 #multiplos clientes
 def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, porta))
-    print(f'[Nova conexão] cliente conectado em {endereco}')
+    # print(f'[Nova conexão] cliente conectado em {endereco}')
+    jogo.seguro_print(f'[Nova conexão] cliente conectado em {endereco}')
     jogo.adicionar_cliente(conexao)
 
     while True:
@@ -68,27 +81,21 @@ def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, po
                 break # desconecta
 
             comando, dados = Protocolo.decodificar(msg) # separa em comando e dados a mensagem 
-
-            try:
-                tentativa = int(dados)
-            except ValueError:
-                conexao.send((Protocolo.codificar(Protocolo.ERRO, "Digite um número válido") + "\n").encode())
-                # conexao.send() = envia os dados para esse socket, ou esse cliente especifico
-                # Protocolo.codificar = organiza a mensagem, unindo o comando e dados de uma forma padronizada e retorna uma string
-                # encode = transforma a string retornada pelo codificar em bytes para que seja possivel enviar pelo socket
-                continue
             
             if comando == Protocolo.SAIR:
                 # time.sleep(0.2)  
                 jogo.remover_cliente(conexao)
                 # time.sleep(0.2)
                 conexao.send((Protocolo.codificar(Protocolo.FIM_PARTIDA, "Se desconectando do servidor...") + "\n").encode())
+                # conexao.send() = envia os dados para esse socket, ou esse cliente especifico
+                # Protocolo.codificar = organiza a mensagem, unindo o comando e dados de uma forma padronizada e retorna uma string
+                # encode = transforma a string retornada pelo codificar em bytes para que seja possivel enviar pelo socket
                 break
             elif comando == Protocolo.TENTATIVA: # condicionamento do valor inserido pelo usuário
-                if tentativa > jogo.num_secreto:
+                if dados > jogo.num_secreto:
                     # time.sleep(0.2)  
                     conexao.send((Protocolo.codificar(Protocolo.MAIOR, "O numero é menor") + "\n").encode())
-                elif tentativa < jogo.num_secreto:
+                elif dados < jogo.num_secreto:
                     # time.sleep(0.2)  
                     conexao.send((Protocolo.codificar(Protocolo.MENOR, "O numero é maior") + "\n").encode())
                 else:
@@ -102,28 +109,67 @@ def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, po
                 conexao.send(Protocolo.codificar(Protocolo.ERRO, "Comando inválido").encode())
         
         except Exception as e:
-            print(f"[Erro] {e}")
+            # print(f"[Erro] {e}")
+            jogo.seguro_print(f"[Erro] {e}")
             break
 
-    print(f'[desconectado] {endereco}')
+    # print(f'[desconectado] {endereco}')
+    jogo.seguro_print(f'[desconectado] {endereco}')
     conexao.close()
 
-def main():
+def comando_servidor(servidor, jogo): # (conexao do servidor, objeto jogo)
+    while True:
+
+        try:
+            cmd = input("").strip().upper()
+        except:
+            # print("Digito inválido")
+            jogo.seguro_print("Digito inválido")
+            continue 
+
+        if cmd == "Y":
+            # print("Encerrando servidor e desconectando jogadores")
+            jogo.seguro_print("Encerrando servidor e desconectando jogadores")
+
+            with jogo.lock:
+                for c in jogo.clientes:
+                    try:
+                        c.send((Protocolo.codificar(Protocolo.FIM_SERVIDOR, "Admin encerrou o servidor. Até logo") + "\n").encode())
+                        c.close()
+                    except:
+                        pass
+
+                jogo.clientes.clear()
+                jogo.clientesWin.clear()
+
+            servidor.close()
+            break
+
+def main(): # thread principal
     # cria socket TCP
     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # (tipo de Rede, tipo de Protocolo)
     # bind em 8888
     servidor.bind((LOCALHOST, PORTA)) # associa a um endereço e porta fixas
     #aguarda conexão
     servidor.listen() # fica no modo escuta, default: 5
-    print('[server ativado]')
+    # print('[server ativado]')
+    jogo.seguro_print('[server ativado]')
 
     jogo.iniciar_game() # inicia primeira rodada
 
-    while True: # loop para aceitar novas conexões
-        conexao, endereco = servidor.accept() # cria um novo objeto socket para cada cliente
-        thread = threading.Thread(target=clientes, args=(conexao, endereco))  # cria thread para atender multiplos usuarios (função que vai lidar com cada cliente, argumentos)
-        thread.start() # inicia a thread
-        print(f'[conexoes ativas] {threading.active_count() - 1}')
+    # thread para receber comandos
+    thread_comandos = threading.Thread(target=comando_servidor, args=(servidor, jogo), daemon=True)
+    thread_comandos.start()
+
+    while True: # loop para aceitar novas conexões com uma thread para cada
+        try:
+            conexao, endereco = servidor.accept() # cria um novo objeto socket para cada cliente
+            thread = threading.Thread(target=clientes, args=(conexao, endereco), daemon=True)  # cria thread para atender multiplos usuarios (função que vai lidar com cada cliente, argumentos)
+            thread.start() # inicia a thread
+            # print(f'[conexoes ativas] {threading.active_count() - 1}')
+            jogo.seguro_print(f'[conexoes ativas] {threading.active_count() - 1}')
+        except:
+            break
 
 if __name__ == '__main__': # só executa diretamente
     main()

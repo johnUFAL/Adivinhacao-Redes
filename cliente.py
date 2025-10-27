@@ -21,12 +21,17 @@ while True:
 
     if not aguardar: # para impedir o usuario de inputar algo ao vencer
 
-        tentativa = int(input('Valor: ')) # será perguntado indefinidamente
+        try:
+            tentativa = int(input('Valor: ')) # será perguntado indefinidamente
+        except:
+            print("Valor invalido")
+            continue
 
         if tentativa == -1:
-            time.sleep(.2)
+            # time.sleep(.2)
             cliente.send(Protocolo.codificar(Protocolo.SAIR, "").encode()) # envia uma mensagem de saida para o servidor
             resp = cliente.recv(1024).decode() # recebe a mensagem de saida do servidor mostrando que ele recebeu a solicitação de saida
+            
             comando, dados = Protocolo.decodificar(resp)
 
             if comando == Protocolo.FIM_PARTIDA:
@@ -37,7 +42,7 @@ while True:
 
             break
         
-        time.sleep(.2)
+        # time.sleep(.2)
         cliente.send(Protocolo.codificar(Protocolo.TENTATIVA, tentativa).encode()) # envia uma mensagem com a tentativa para o servidor
         
         resp = cliente.recv(1024).decode() # recebe uma mensagem do servidor com até 1024 bytes que será transformada de bytes para string
@@ -58,6 +63,9 @@ while True:
 
             if comando == Protocolo.ERRO:
                 print("Você digitou um valor inválido!")
+            elif comando == Protocolo.FIM_SERVIDOR:
+                print(f"{dados}")
+                break
             elif comando == Protocolo.ACERTOU:
                 print(f"{dados}")
                 aguardar = True

@@ -11,6 +11,7 @@ class Protocolo:
     MENOR = "MENOR"
     ACERTOU = "ACERTOU"
     FIM_PARTIDA = "FIM_PARTIDA"
+    FIM_SERVIDOR = "FIM_SERVIDOR"
     ERRO = "ERRO"
     GANHOU = "GANHOU"
     AVISO = "AVISO"
@@ -21,7 +22,7 @@ class Protocolo:
 
     @staticmethod
     def decodificar(mensagem):
-        partes = mensagem.split("|", 1) #dividndo a string por cada |
+        partes = mensagem.split("|", 1) #dividindo a string por cada |
         
         if len(partes) == 2:
             comando, dados = partes #decodificando
