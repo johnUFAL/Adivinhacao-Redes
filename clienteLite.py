@@ -43,11 +43,16 @@ def recebe_servidor(cliente):
                 rodando = False
                 # cliente.close()
                 # sys.exit(0)
+            elif comando == Protocolo.PERDENDO:
+                print(f"{dados}\nValor: ", end="") # gambiarra no prompt
             elif comando == Protocolo.ACERTOU:
                 print(dados)
                 aguardar = True
             elif comando == Protocolo.AVISO:
-                print(dados)
+                if aguardar:    
+                    print(dados)
+                else:
+                    print(f"[Skip]\n{dados}") # gambiarra no prompt
             else: # MAIOR ou MENOR
                 print(f'Dica: {dados}')
         
@@ -62,6 +67,7 @@ def envio_mensagem(cliente):
         if not aguardar: # para impedir o usuario de inputar algo ao vencer
 
             try:
+                time.sleep(.2)
                 tentativa = int(input('Valor: ')) # será perguntado indefinidamente
             except:
                 print("Valor invalido")

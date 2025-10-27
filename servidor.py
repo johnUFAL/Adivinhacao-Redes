@@ -60,7 +60,7 @@ class Jogo:
             conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Há {len(clientes_copy) - len(clientesWin_copy)} ainda jogando")).encode())
 
             if conexao not in clientesWin_copy:
-                conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Bora betinha agiliza! O colega de endereço {endereco} acertou!!!")).encode())
+                conexao.send((Protocolo.codificar(Protocolo.PERDENDO, f"Bora betinha agiliza! O colega de endereço {endereco} acertou!!!")).encode())
 
 #global game aqui
 jogo = Jogo()
@@ -103,8 +103,8 @@ def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, po
                     conexao.send((Protocolo.codificar(Protocolo.MENOR, "O numero é maior")).encode())
                 else:
                     conexao.send((Protocolo.codificar(Protocolo.ACERTOU, "Você acertou!!! Aguarde os friends acertarem")).encode())
-                    jogo.cliente_acertou(conexao)
                     
+                    jogo.cliente_acertou(conexao)
                     jogo.broadcast(endereco)
             else:
                 conexao.send(Protocolo.codificar(Protocolo.ERRO, "Comando inválido").encode())
