@@ -13,7 +13,35 @@ def ouvir_server(cliente):
             if not resp:
                 break
             comando, dados = Protocolo.decodificar(resp)
-            print(f'SERVER: {comando} | {dados}')
+
+            #mehlorando mensagens 
+            if comando == Protocolo.ACERTOU:
+                print(f'\n ✔ {dados}')
+                print("=" * 20)
+
+            elif comando == Protocolo.FIM_PARTIDA:
+                print(f'\n 🏆 {dados}')
+                print("=" * 20)
+
+            elif comando == Protocolo.INICIAR:
+                if "Segundos" in dados or "em" in dados:
+                    print(f'⏳´{dados}')
+                else:
+                    print(f'\n NOVO JOGO INICIADO!')
+                    print(f'{dados}')
+                    print("=" * 20)
+
+            elif comando == Protocolo.MAIOR:
+                print(f'📈 {dados}')
+
+            elif comando == Protocolo.MENOR:
+                print(f'📉 {dados}')
+
+            elif comando == Protocolo.ERRO:
+                print(f'❌ {dados}')
+
+            else: 
+                print(f'{dados}')
 
         except:
             break
@@ -27,7 +55,7 @@ thread.daemon = True
 thread.start()
 
 while True:
-    tentativa = input('Escolha um número ou sair: ')
+    tentativa = input('\nDigite um número ou "sair": ')
     if tentativa.lower() == 'sair':
         time.sleep(.2)
         cliente.send(Protocolo.codificar(Protocolo.SAIR, "").encode())

@@ -16,7 +16,7 @@ class Jogo:
     def inicar_game(self):
         self.num_secreto = random.randint(1, 100) #gerando numero aleatorio
         self.jogo_ativo = True
-        print(f'Nova partida, Num: {self.num_secreto}')
+        print(f'Nova partida! Número secreto: {self.num_secreto}')
 
     #broadcast para notificr todos
     def broadcast(self, msg, cliente_origem=None):
@@ -43,7 +43,7 @@ def clientes(conexao, endereco):
     print(f'[Nova conexão] cliente conectado em {endereco}')
 
     time.sleep(0.2)  
-    conexao.send(Protocolo.codificar(Protocolo.INICIAR, "Adivinhe o n. escolhido entre 1 e 100").encode())
+    conexao.send(Protocolo.codificar(Protocolo.INICIAR, "Adivinhe o número escolhido entre 1 e 100").encode())
 
     while True:
         try:
@@ -72,11 +72,18 @@ def clientes(conexao, endereco):
                     
                     msg_broad = Protocolo.codificar(Protocolo.FIM_PARTIDA, f'Cliebte {endereco} acertou o número {jogo.num_secreto}!')
                     jogo.broadcast(msg_broad, conexao)
-                    print(f'Cliente {endereco} acertou {jogo.num_secreto}! Notificando todos!!!')
+                    print(f'Jogador {endereco} venceu! O número era: {jogo.num_secreto}')
             
                     #reinicia partida
+                    print(f'Novo jogo em 5 segundos...')
+                    for i in range(5, 0, -1):
+                        msg_cont = Protocolo.codificar(Protocolo.INICIAR, f'Novo Jogo em {i}...')
+                        jogo.broadcast(msg_cont)
+                        time.sleep(1)
+                    #recomecando
                     jogo.inicar_game()
                     msg_new_game = Protocolo.codificar(Protocolo.INICIAR, f"Novo Jogo¹ Adivinhe o número netre 1 e 100")
+                    jogo.broadcast(msg_new_game)
             else:
                 time.sleep(0.2)  
                 conexao.send(Protocolo.codificar(Protocolo.ERRO, "Comando inválido").encode())
@@ -86,8 +93,8 @@ def clientes(conexao, endereco):
             break
 
         #pra remover cliente quando sair 
-        if conexao in jogo.clientes:
-            jogo.clientes.remove(conexao)
+    if conexao in jogo.clientes:
+        jogo.clientes.remove(conexao)
 
     print(f'[desconectado] {endereco}')
     conexao.close()
