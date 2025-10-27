@@ -167,7 +167,7 @@ def main(): # thread principal
             thread = threading.Thread(target=clientes, args=(conexao, endereco), daemon=True)  # cria thread para atender multiplos usuarios (função que vai lidar com cada cliente, argumentos)
             thread.start() # inicia a thread
             # print(f'[conexoes ativas] {threading.active_count() - 1}')
-            jogo.seguro_print(f'[conexoes ativas] {threading.active_count() - 1}')
+            jogo.seguro_print(f"[conexoes ativas] {threading.active_count() - 2}") # 2 = (thread principal (main)) + (thread auxiliar de leitura)
         except:
             break
 
