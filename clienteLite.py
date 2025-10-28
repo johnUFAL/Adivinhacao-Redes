@@ -33,6 +33,9 @@ def recebe_servidor(cliente):
 
             if comando == Protocolo.ERRO:
                 print(dados)
+            elif comando == Protocolo.RESET:
+                print(dados)
+                aguardar = False
             elif comando == Protocolo.FIM_PARTIDA:
                 print(dados)
                 rodando = False
@@ -59,9 +62,11 @@ def recebe_servidor(cliente):
                     print(f"[Skip]\n{dados}") # gambiarra no prompt
             else: # MAIOR ou MENOR
                 print(f'Dica: {dados}')
+
+# recv e input = são funções bloqueantes
         
 def envio_mensagem(cliente):
-    print("Adivinhe o numero escolhido entre 1 e 100 [-1 para sair]: ") # texto inicial
+    print("Adivinhe o numero escolhido entre o intervalo inicial de 1 a 100. A cada partida o intervalo será acrescido de 100. Warning: [-1 para sair]: ") # texto inicial
 
     global rodando
     global aguardar
@@ -85,7 +90,7 @@ def envio_mensagem(cliente):
                     cliente.close()
                     continue
                 except (ConnectionResetError, BrokenPipeError): 
-                    print("Server fechado =(")
+                    print("Server fechado =( 1")
                     # ConnectionResetError → servidor fechou a conexão abruptamente
                     # BrokenPipeError → ocorre quando se tenta escrever em socket fechado
 
@@ -93,7 +98,7 @@ def envio_mensagem(cliente):
                 cliente.send(Protocolo.codificar(Protocolo.TENTATIVA, tentativa).encode()) # envia uma mensagem com a tentativa para o servidor
                 time.sleep(.2)
             except (ConnectionResetError, BrokenPipeError): 
-                print("Server fechado =(")
+                print("Server fechado =( 2")
 
 ####################
 cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # cria o objeto socket

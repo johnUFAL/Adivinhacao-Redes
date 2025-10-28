@@ -36,12 +36,14 @@ class Jogo:
         self.seguro_print(f'Partida {self.partidas}°, Num: {self.num_secreto}')
 
     def reiniciar_game(self):
-        with self.lock:            
-            self.partidas += 1 # vai aumentando a dificuldade 
-            self.clientes.clear()
-            self.clientesWin.clear()
-            self.num_secreto = random.randint(1, (100 * self.partidas)) # 100, 200, 300, ...
-            self.seguro_print(f'Partida {self.partidas}°, Num: {self.num_secreto}')
+        # with self.lock:  porque já está sendo usado na função cliente_acertou        
+        self.partidas += 1 # vai aumentando a dificuldade 
+        self.clientesWin.clear() # limpa a lista dos vencedores
+        self.num_secreto = random.randint(1, (100 * self.partidas)) # 100, 200, 300, ...
+        self.seguro_print(f'Partida {self.partidas}°, Num: {self.num_secreto}')
+        
+        for c in self.clientes:
+            c.send(Protocolo.codificar(Protocolo.RESET, f"Vamos voltar com as brincadeiras gostosas, parte {self.partidas}").encode())
 
     def adicionar_cliente(self, conexao):
         with self.lock:
@@ -60,13 +62,18 @@ class Jogo:
             if conexao in self.clientes and conexao not in self.clientesWin:
                 self.clientesWin.append(conexao)
 
-            if self.clientes > 0 and self.clientes == self.clientesWin:
+            self.broadcast(endereco)
+
+            if len(self.clientes) > 0 and len(self.clientes) == len(self.clientesWin):
                 self.reiniciar_game()
 
     def broadcast(self, endereco):
-        with self.lock:
-            clientes_copy = self.clientes[:] # copias rasas de segurança
-            clientesWin_copy = self.clientesWin[:] 
+        # with self.lock: porque já está sendo usado na função cliente_acertou
+        #     clientes_copy = self.clientes[:] # copias rasas de segurança
+        #     clientesWin_copy = self.clientesWin[:] 
+
+        clientes_copy = self.clientes[:] # copias rasas por segurança
+        clientesWin_copy = self.clientesWin[:] 
 
         for conexao in clientes_copy:
             conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Há {len(clientes_copy) - len(clientesWin_copy)} ainda jogando")).encode()) # mensagem para todos os clientes
