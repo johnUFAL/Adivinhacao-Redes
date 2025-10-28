@@ -43,12 +43,17 @@ class Jogo:
         self.num_secreto = random.randint(1, (100 * self.partidas)) # 100, 200, 300, ...
         self.seguro_print(f'Partida {self.partidas}°, Num: {self.num_secreto}')
         
+        self.seguro_print("\n#################################################")
+        self.seguro_print("\t\tPLACAR:")
+        
         for chave in self.placar: # printa para o servidor
-            msg = f"endereco={chave}, pontuacao={self.placar[chave]}"
+            msg = f"Endereco = {chave}, Pontuacao = {self.placar[chave]}"
             self.seguro_print(msg)
 
+        self.seguro_print("#################################################\n")
+        
         for c in self.clientes: # envia uma mensagem para todos
-            c.send(Protocolo.codificar(Protocolo.RESET, f"Vamos voltar com as brincadeiras gostosas, parte {self.partidas}").encode())
+            c.send(Protocolo.codificar(Protocolo.NEXT, f"Vamos voltar com as brincadeiras gostosas, parte {self.partidas}").encode())
 
     def resetar_game(self):
         self.partidas = 1
@@ -73,11 +78,14 @@ class Jogo:
             else:
                 aviso_saida = "Um beta saiu!"
             
-            for c in self.clientes:
-                conexao.send(Protocolo.codificar(Protocolo.AVISO, aviso_saida).encode())
+            for c in self.clientes: # envia uma mensagem sobre o andamento do game
+                c.send(Protocolo.codificar(Protocolo.AVISO, aviso_saida).encode())
 
-            if len(self.clientes) == 0: # para o caso de faltar somente um jogador para completar e este sair da partida
+            if len(self.clientes) == 0: # para o caso de haver somente um jogador e este sair da partida
                 self.resetar_game()     
+
+            if len(self.clientesWin) == len(self.clientes) and len(self.clientes) != 0: # para o caso de faltar somente um jogador para completar e este sair da partida
+                self.proximo_level()
 
     def cliente_acertou(self, conexao, endereco):
         with self.lock:

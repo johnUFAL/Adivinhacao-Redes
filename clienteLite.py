@@ -31,42 +31,45 @@ def recebe_servidor(cliente):
             comando, dados = Protocolo.decodificar(msg)
             # print(f'Server resposta: {comando} | {dados}')
 
-            if comando == Protocolo.ERRO:
+            if comando == Protocolo.ERRO: # para valores ou comandos errados que por acaso passaram do tratamento de erros nesse arquivo
                 print(dados)
-            elif comando == Protocolo.RESET:
+            elif comando == Protocolo.NEXT: # proximo level
                 print(dados)
-                aguardar = False
-            elif comando == Protocolo.FIM_PARTIDA:
+                aguardar = False # todos poderão digitar agora
+            elif comando == Protocolo.FIM_PARTIDA: # jogador saiu da partida
                 print(dados)
-                rodando = False
+                rodando = False # irá cancelar os loops infinitos das threads
                 # cliente.close()
                 # sys.exit(0)
-            elif comando == Protocolo.FIM_SERVIDOR:
-                if aguardar:    
+            elif comando == Protocolo.FIM_SERVIDOR: # servidor desconectou
+                if aguardar: # para caso o usuario esteja aguardando os outros jogadores acertarem
                     print(dados)
                 else:
-                    print(f"[Skip]\n{dados}") # gambiarra no prompt
+                    print(f"[Skip]\n{dados}") # gambiarra no prompt para os jogadores que ainda não acertaram
                 # print(dados)
                 rodando = False
                 # cliente.close()
                 # sys.exit(0)
-            elif comando == Protocolo.PERDENDO:
+            elif comando == Protocolo.PERDENDO: # mensagem para os que ainda não acertaram
                 print(f"{dados}\nValor: ", end="") # gambiarra no prompt
-            elif comando == Protocolo.ACERTOU:
+            elif comando == Protocolo.ACERTOU: # caso o jogador acerte ele ficará inapto a digitar qualquer coisa
+            # mas é valido dizer que caso continue digitando no terminal estes valores irão ser armazenados no buffer de entrada
+            # e posteriormente irão ser entregues ao input (funcao bloqueante)  
                 print(dados)
                 aguardar = True
-            elif comando == Protocolo.AVISO:
+            elif comando == Protocolo.AVISO: # aviso para os jogadores
                 if aguardar:    
                     print(dados)
                 else:
-                    print(f"[Skip]\n{dados}") # gambiarra no prompt
-            else: # MAIOR ou MENOR
+                    print(f"[Skip]\n{dados}\nValor: ", end="") # gambiarra no prompt
+            else: # MAIOR ou MENOR, dicas sobre o prosseguimento do game
                 print(f'Dica: {dados}')
 
 # recv e input = são funções bloqueantes
         
 def envio_mensagem(cliente):
-    print("Adivinhe o numero escolhido entre o intervalo inicial de 1 a 100. A cada partida o intervalo será acrescido de 100. Warning: [-1 para sair]: ") # texto inicial
+    print(f"Adivinhe o numero escolhido entre o intervalo inicial de 1 a 100. A cada partida o intervalo será acrescido de 100. Warning: [-1 para sair]\nSeu endereco = {cliente.getsockname()}") # texto inicial
+    # cliente.getsockname() -> Isso retorna uma tupla (ip_local, porta_local)
 
     global rodando
     global aguardar

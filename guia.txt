@@ -1,17 +1,16 @@
 https://www.datacamp.com/pt/tutorial/a-complete-guide-to-socket-programming-in-python
-.AF_INET -> IPv4, cria um ponot de conexão 
+.AF_INET -> IPv4, cria um ponto de conexão 
 .SOCK_STREAM -> soquete que especifica um fluxo de dados confiável e orientado (TCP)
 .bind -> associa um endereço de rede a uma porta local
 .listen -> inicia a escuta de conexão de entrada 
-.accept -> aceita uma conexão de um cliente
-.decode -> converte uma sequência de bytes de volta para uma string legível
+.accept -> aceita uma conexão de um cliente 
+.decode -> converte uma sequência de bytes para uma string legível
+.encode -> converte uma string legível para uma uma sequência de bytes
 .recv -> recebe dados 
-.send -> enviar dados
+.send -> envia dados
 .close -> fecha conexão 
 
-
-thread: é um fluxo de execução dentro de um processo que permite que uma aplicação execute 
-múltiplas tarefas simultanemanente ou concorrentemente
+thread: é um fluxo de execução dentro de um processo que permite que uma aplicação execute múltiplas tarefas simultânea ou concorrentemente
 https://medium.com/@habbema/threads-em-python-9a3a7b3c776d
 threading.Thread -> permite criar e gerenciar threads
 .active_count -> retorna o número de threads ativadas em um determinado momento
@@ -19,4 +18,4 @@ threading.Thread -> permite criar e gerenciar threads
 @staticmethod -> um "decorador" que vai definir um método estático dentro de uma classe 
 Não recebe um self específico
 
-time.sleep() -> uma pequena paua entre as mensagens para ficar mehlor de visualizar
+time.sleep() -> uma pequena pausa entre as mensagens para ficar melhor de visualizar
