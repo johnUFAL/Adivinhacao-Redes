@@ -36,7 +36,7 @@ class Jogo:
         # print(f'Nova partida, Num: {self.num_secreto}')
         self.seguro_print(f'Partida {self.partidas}°, Num: {self.num_secreto}')
 
-    def reiniciar_game(self):
+    def proximo_level(self):
         # with self.lock:  porque já está sendo usado na função cliente_acertou        
         self.partidas += 1 # vai aumentando a dificuldade 
         self.clientesWin.clear() # limpa a lista dos vencedores
@@ -49,6 +49,11 @@ class Jogo:
 
         for c in self.clientes: # envia uma mensagem para todos
             c.send(Protocolo.codificar(Protocolo.RESET, f"Vamos voltar com as brincadeiras gostosas, parte {self.partidas}").encode())
+
+    def resetar_game(self):
+        self.partidas = 1
+        self.num_secreto = random.randint(1, 100)
+        self.seguro_print(f'Retornando a partida {self.partidas}°, Num: {self.num_secreto}')
 
     def adicionar_cliente(self, conexao, endereco):
         with self.lock:
@@ -71,8 +76,8 @@ class Jogo:
             for c in self.clientes:
                 conexao.send(Protocolo.codificar(Protocolo.AVISO, aviso_saida).encode())
 
-            if (len(self.clientes) > 0 and len(self.clientes) == len(self.clientesWin)): # para o caso de faltar somente um jogador para completar e este sair da partida
-                self.reiniciar_game()       
+            if len(self.clientes) == 0: # para o caso de faltar somente um jogador para completar e este sair da partida
+                self.resetar_game()     
 
     def cliente_acertou(self, conexao, endereco):
         with self.lock:
@@ -90,7 +95,7 @@ class Jogo:
             self.broadcast(endereco) # envia mensagem da quantidade restante de jogadores que faltam e avisa para correr os que ainda não acertaram
 
             if len(self.clientes) > 0 and len(self.clientes) == len(self.clientesWin): # se houver jogadores e a lista de vencedores for igual a de jogadores
-                self.reiniciar_game()
+                self.proximo_level()
 
     def broadcast(self, endereco):
         # with self.lock: porque já está sendo usado na função cliente_acertou
