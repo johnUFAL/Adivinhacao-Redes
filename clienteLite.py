@@ -18,7 +18,7 @@ def recebe_servidor(cliente):
         resp = cliente.recv(1024).decode() # recebe uma mensagem do servidor com até 1024 bytes que será transformada de bytes para string
 
         if not resp:
-            print("Server fechado =(")
+            print("Server fechado =( 3")
             break
 
         mensagens = resp.split("\n") # para caso seja recebida multiplas mensagens do servidor
@@ -76,7 +76,7 @@ def envio_mensagem(cliente):
         if not aguardar: # para impedir o usuario de inputar algo ao vencer
 
             try:
-                time.sleep(.2)
+                time.sleep(.15)
                 tentativa = int(input('Valor: ')) # será perguntado indefinidamente
             except:
                 if rodando: # gambiarra para não printar quando o servidor for desconectado

@@ -15,6 +15,7 @@ class Jogo:
         self.num_secreto = None
         self.jogo_ativo = False
         self.partidas = 1 # partida number one, vai contabilizar o numero de partidas
+        self.placar = {} # dicionario = {endereco: pontuacao}
         self.clientes = [] # lista de clientes
         self.clientesWin = [] # lista de clientes que acertaram
         self.lock = threading.Lock() # impede com que multiplas threads executem ações que possam resultar em conflito
@@ -42,29 +43,53 @@ class Jogo:
         self.num_secreto = random.randint(1, (100 * self.partidas)) # 100, 200, 300, ...
         self.seguro_print(f'Partida {self.partidas}°, Num: {self.num_secreto}')
         
-        for c in self.clientes:
+        for chave in self.placar: # printa para o servidor
+            msg = f"endereco={chave}, pontuacao={self.placar[chave]}"
+            self.seguro_print(msg)
+
+        for c in self.clientes: # envia uma mensagem para todos
             c.send(Protocolo.codificar(Protocolo.RESET, f"Vamos voltar com as brincadeiras gostosas, parte {self.partidas}").encode())
 
-    def adicionar_cliente(self, conexao):
+    def adicionar_cliente(self, conexao, endereco):
         with self.lock:
             if conexao not in self.clientes:
-                self.clientes.append(conexao)   
+                self.clientes.append(conexao)
+                self.placar[endereco] = 0 # inicializa o placar do jogador em zero   
 
-    def remover_cliente(self, conexao):
+    def remover_cliente(self, conexao, endereco):
         with self.lock:
             if conexao in self.clientes:
                 self.clientes.remove(conexao) 
+                self.placar.pop(endereco, None) # remove o endereco do jogador do placar
+            
             if conexao in self.clientesWin:
-                self.clientesWin.remove(conexao)       
+                aviso_saida = "Um dos vencedores saiu!"
+                self.clientesWin.remove(conexao) 
+            else:
+                aviso_saida = "Um beta saiu!"
+            
+            for c in self.clientes:
+                conexao.send(Protocolo.codificar(Protocolo.AVISO, aviso_saida).encode())
+
+            if (len(self.clientes) > 0 and len(self.clientes) == len(self.clientesWin)): # para o caso de faltar somente um jogador para completar e este sair da partida
+                self.reiniciar_game()       
 
     def cliente_acertou(self, conexao, endereco):
         with self.lock:
-            if conexao in self.clientes and conexao not in self.clientesWin:
+            if conexao in self.clientes and conexao not in self.clientesWin: # caso esteja na lista de jogadores e ainda não tenha sido adicionado na lista de vencedores
                 self.clientesWin.append(conexao)
 
-            self.broadcast(endereco)
+                if len(self.clientesWin) == 1: # se a lista de vencedores for igual a 1, adiciona o primeiro vencedor
+                    self.placar[endereco] += 1 # apenas o primeiro vencedor pontua
+                    # chegando ao valor 1  
+                        # pela esquerda (0 para infinito):
+                            # se for esse o caso apenas o primeiro jogador irá pontuar
+                        # pela direita (infinito para 0):
+                            # o numero de jogadores vencedores pode diminuir, caso um dos vencedores saia e o total de vencedores fosse igual a 2, ainda sim, não ocorreria problemas, pois a funcao cliente_acertou não seria chamada e a adicao de novos jogadores vem antes da checagem
 
-            if len(self.clientes) > 0 and len(self.clientes) == len(self.clientesWin):
+            self.broadcast(endereco) # envia mensagem da quantidade restante de jogadores que faltam e avisa para correr os que ainda não acertaram
+
+            if len(self.clientes) > 0 and len(self.clientes) == len(self.clientesWin): # se houver jogadores e a lista de vencedores for igual a de jogadores
                 self.reiniciar_game()
 
     def broadcast(self, endereco):
@@ -77,7 +102,7 @@ class Jogo:
 
         for conexao in clientes_copy:
             conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Há {len(clientes_copy) - len(clientesWin_copy)} ainda jogando")).encode()) # mensagem para todos os clientes
-
+           
             if conexao not in clientesWin_copy:
                 conexao.send((Protocolo.codificar(Protocolo.PERDENDO, f"Bora betinha agiliza! O colega de endereço {endereco} acertou!!!")).encode()) # mensagem para apenas os clientes que ainda não acertaram
 
@@ -88,7 +113,7 @@ jogo = Jogo()
 def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, porta))
     # print(f'[Nova conexão] cliente conectado em {endereco}')
     jogo.seguro_print(f'[Nova conexão] cliente conectado em {endereco}')
-    jogo.adicionar_cliente(conexao)
+    jogo.adicionar_cliente(conexao, endereco)
 
     while True:
         try:
@@ -96,13 +121,13 @@ def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, po
             # recv = lê até 1024 bytes
             # decode = transforma os bytes em string
             if not msg: 
-                jogo.remover_cliente(conexao)
+                jogo.remover_cliente(conexao, endereco)
                 break # desconecta
 
             comando, dados = Protocolo.decodificar(msg) # separa em comando e dados a mensagem 
             
             if comando == Protocolo.SAIR:
-                jogo.remover_cliente(conexao)
+                jogo.remover_cliente(conexao, endereco)
                 
                 conexao.send((Protocolo.codificar(Protocolo.FIM_PARTIDA, "Se desconectando do servidor...")).encode())
                 # conexao.send() = envia os dados para esse socket, ou esse cliente especifico
@@ -121,7 +146,12 @@ def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, po
                 elif valor_inserido < jogo.num_secreto:
                     conexao.send((Protocolo.codificar(Protocolo.MENOR, "O numero é maior")).encode())
                 else:
-                    conexao.send((Protocolo.codificar(Protocolo.ACERTOU, "Você acertou!!! Aguarde os friends acertarem")).encode())
+                    if len(jogo.clientes) == 1:
+                        conexao.send((Protocolo.codificar(Protocolo.ACERTOU, f"Que venha a próxima rodada!")).encode()) # mensagem para todos os clientes
+                    else:
+                        conexao.send((Protocolo.codificar(Protocolo.ACERTOU, "Você acertou!!! Aguarde os friends acertarem")).encode())
+
+                    time.sleep(.1)
                     
                     jogo.cliente_acertou(conexao, endereco)
                     # jogo.broadcast(endereco)
@@ -141,6 +171,7 @@ def comando_servidor(servidor, jogo): # (conexao do servidor, objeto jogo)
 
         try:
             cmd = input("").strip().upper()
+            print("\r" + " " * 80 + "\r", end="")
         except:
             # print("Digito inválido")
             jogo.seguro_print("Digito inválido")
