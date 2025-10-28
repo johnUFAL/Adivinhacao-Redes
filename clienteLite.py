@@ -39,7 +39,11 @@ def recebe_servidor(cliente):
                 # cliente.close()
                 # sys.exit(0)
             elif comando == Protocolo.FIM_SERVIDOR:
-                print(dados)
+                if aguardar:    
+                    print(dados)
+                else:
+                    print(f"[Skip]\n{dados}") # gambiarra no prompt
+                # print(dados)
                 rodando = False
                 # cliente.close()
                 # sys.exit(0)
@@ -70,7 +74,8 @@ def envio_mensagem(cliente):
                 time.sleep(.2)
                 tentativa = int(input('Valor: ')) # será perguntado indefinidamente
             except:
-                print("Valor invalido")
+                if rodando: # gambiarra para não printar quando o servidor for desconectado
+                    print("Valor invalido")
                 continue
 
             if tentativa == -1:
