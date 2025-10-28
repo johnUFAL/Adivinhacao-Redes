@@ -1,4 +1,4 @@
-#Inicar server, inicar jogo, notificar, remover desconectados, receber dados, criar thread 
+# Iniciar server, inicar jogo, notificar, remover desconectados, receber dados, criar thread 
 import socket 
 import threading
 import random
@@ -9,12 +9,13 @@ from protocolo import Protocolo
 LOCALHOST = "localhost"
 PORTA = 8888
 
-# propriedades do jogo e inicalização de partida
+# propriedades do jogo e inicialização de partida
 class Jogo:
     def __init__(self):
         self.num_secreto = None
         self.jogo_ativo = False
-        self.clientes = [] #lista de clientes
+        self.partidas = 1 # partida number one, vai contabilizar o numero de partidas
+        self.clientes = [] # lista de clientes
         self.clientesWin = [] # lista de clientes que acertaram
         self.lock = threading.Lock() # impede com que multiplas threads executem ações que possam resultar em conflito
         self.lock_print = threading.Lock() # impede com as threads que estão vinculadas com os clientes entrem em conflito com que recebe comandos
@@ -32,7 +33,15 @@ class Jogo:
         self.num_secreto = random.randint(1, 100) #gerando numero aleatorio
         self.jogo_ativo = True
         # print(f'Nova partida, Num: {self.num_secreto}')
-        self.seguro_print(f'Nova partida, Num: {self.num_secreto}')
+        self.seguro_print(f'Partida {self.partidas}°, Num: {self.num_secreto}')
+
+    def reiniciar_game(self):
+        with self.lock:            
+            self.partidas += 1 # vai aumentando a dificuldade 
+            self.clientes.clear()
+            self.clientesWin.clear()
+            self.num_secreto = random.randint(1, (100 * self.partidas)) # 100, 200, 300, ...
+            self.seguro_print(f'Partida {self.partidas}°, Num: {self.num_secreto}')
 
     def adicionar_cliente(self, conexao):
         with self.lock:
@@ -46,21 +55,24 @@ class Jogo:
             if conexao in self.clientesWin:
                 self.clientesWin.remove(conexao)       
 
-    def cliente_acertou(self, conexao):
+    def cliente_acertou(self, conexao, endereco):
         with self.lock:
             if conexao in self.clientes and conexao not in self.clientesWin:
                 self.clientesWin.append(conexao)
 
+            if self.clientes > 0 and self.clientes == self.clientesWin:
+                self.reiniciar_game()
+
     def broadcast(self, endereco):
         with self.lock:
-            clientes_copy = self.clientes[:]
-            clientesWin_copy = self.clientesWin[:]
+            clientes_copy = self.clientes[:] # copias rasas de segurança
+            clientesWin_copy = self.clientesWin[:] 
 
         for conexao in clientes_copy:
-            conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Há {len(clientes_copy) - len(clientesWin_copy)} ainda jogando")).encode())
+            conexao.send((Protocolo.codificar(Protocolo.AVISO, f"Há {len(clientes_copy) - len(clientesWin_copy)} ainda jogando")).encode()) # mensagem para todos os clientes
 
             if conexao not in clientesWin_copy:
-                conexao.send((Protocolo.codificar(Protocolo.PERDENDO, f"Bora betinha agiliza! O colega de endereço {endereco} acertou!!!")).encode())
+                conexao.send((Protocolo.codificar(Protocolo.PERDENDO, f"Bora betinha agiliza! O colega de endereço {endereco} acertou!!!")).encode()) # mensagem para apenas os clientes que ainda não acertaram
 
 #global game aqui
 jogo = Jogo()
@@ -104,8 +116,8 @@ def clientes(conexao, endereco): # (socket desse novo cliente, endereço=(ip, po
                 else:
                     conexao.send((Protocolo.codificar(Protocolo.ACERTOU, "Você acertou!!! Aguarde os friends acertarem")).encode())
                     
-                    jogo.cliente_acertou(conexao)
-                    jogo.broadcast(endereco)
+                    jogo.cliente_acertou(conexao, endereco)
+                    # jogo.broadcast(endereco)
             else:
                 conexao.send(Protocolo.codificar(Protocolo.ERRO, "Comando inválido").encode())
         except Exception as e:

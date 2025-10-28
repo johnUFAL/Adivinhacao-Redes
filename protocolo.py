@@ -16,6 +16,7 @@ class Protocolo:
     GANHOU = "GANHOU"
     AVISO = "AVISO"
     PERDENDO = "PERDENDO"
+    RESET = "RESET"
 
     @staticmethod
     def codificar(comando, dados=""):
