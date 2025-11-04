@@ -47,6 +47,8 @@ def ouvir_server(cliente):
             break
 
 cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+#mude 'localhost' para o ip da sua rede: no win basta procurar no cmd por "ipconfig" e no linux "ifconfig"
 cliente.connect(('localhost', 8888))
 
 #iniciar threads

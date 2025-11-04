@@ -104,6 +104,7 @@ def main():
     # cria socket TCP
     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # bind em 8888
+    #muda 'localhost' para 0.0.0.0 para escutar em todas as interfaces de rede IPv4
     servidor.bind(('localhost', 8888))
     #agaurda conexão
     servidor.listen()
